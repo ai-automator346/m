@@ -23,7 +23,7 @@ genai.configure(api_key=api_key)
 
 
 def identify_product(image: Image.Image) -> dict:
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.0-flash")
     prompt = """この商品の写真を見て、以下を日本語で答えてください。
 
 1. 商品名（ブランド・メーカーと製品名）
