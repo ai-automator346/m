@@ -1,6 +1,6 @@
 import streamlit as st
-import google.generativeai as genai
-import requests
+from google import genai
+from google.genai import types
 from PIL import Image
 import io
 import urllib.parse
@@ -19,11 +19,14 @@ if not api_key:
     st.error("APIキーが設定されていません。Streamlit Cloud の Secrets に GEMINI_API_KEY を追加してください。")
     st.stop()
 
-genai.configure(api_key=api_key)
+client = genai.Client(api_key=api_key)
 
 
 def identify_product(image: Image.Image) -> dict:
-    model = genai.GenerativeModel("gemini-2.0-flash")
+    buf = io.BytesIO()
+    image.save(buf, format="JPEG")
+    img_bytes = buf.getvalue()
+
     prompt = """この商品の写真を見て、以下を日本語で答えてください。
 
 1. 商品名（ブランド・メーカーと製品名）
@@ -37,9 +40,15 @@ def identify_product(image: Image.Image) -> dict:
 コンディション: 〇〇
 検索キーワード: 〇〇"""
 
-    response = model.generate_content([prompt, image])
-    text = response.text
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=[
+            types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
+            prompt,
+        ],
+    )
 
+    text = response.text
     result = {"商品名": "", "型番": "", "コンディション": "", "検索キーワード": "", "raw": text}
     for line in text.split("\n"):
         for key in ["商品名", "型番", "コンディション", "検索キーワード"]:
@@ -58,7 +67,6 @@ def build_search_links(keyword: str) -> dict:
     }
 
 
-# --- UI ---
 tab1, tab2 = st.tabs(["📷 写真で調べる", "⌨️ 文字で調べる"])
 
 with tab1:
@@ -68,7 +76,7 @@ with tab1:
     )
 
     if uploaded:
-        image = Image.open(uploaded)
+        image = Image.open(uploaded).convert("RGB")
         st.image(image, caption="アップロードされた画像", use_column_width=True)
 
         with st.spinner("商品を識別中..."):
@@ -91,7 +99,6 @@ with tab1:
             links = build_search_links(keyword)
             for name, url in links.items():
                 st.link_button(name, url, use_container_width=True)
-
             st.info("💡 「売り切れ」「落札済み」のリンクを見ると実際に売れた価格がわかります")
 
 with tab2:
