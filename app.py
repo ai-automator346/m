@@ -41,7 +41,7 @@ def identify_product(image: Image.Image) -> dict:
 検索キーワード: 〇〇"""
 
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-1.5-flash",
         contents=[
             types.Part.from_bytes(data=img_bytes, mime_type="image/jpeg"),
             prompt,
